@@ -1,0 +1,60 @@
+name: Test
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+
+jobs:
+  test:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: projectm-install
+          path: install-test
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install headless display dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Verify installer output exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x ./install-test/projectM/backend/lib/libprojectM-4.so
+          test -x ./install-test/projectM/frontend/bin/projectMSDL
+          test -d ./install-test/projectM/presets
+          echo "Installer artifacts are present."
+
+      - name: Startup smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if timeout 20s xvfb-run -a \
+            ./install-test/projectM/frontend/bin/projectMSDL \
+            --audioDevice=-1 \
+            --presetPath=./install-test/projectM/presets \
+            --shuffleEnabled=0 \
+            --beatSensitivity=1.5 \
+            --enableSplash=0 \
+            --fullscreen=0; then
+            echo "Frontend started successfully."
+          else
+            rc=$?
+            if [[ "$rc" -eq 124 ]]; then
+              echo "Frontend started and remained alive long enough to satisfy the startup smoke test."
+            else
+              echo "Frontend failed to start with exit code $rc"
+              exit "$rc"
+            fi
+          fi
