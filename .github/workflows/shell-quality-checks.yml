@@ -54,7 +54,7 @@ jobs:
           find . -type f \( -name '*.sh' -o -name '*.bash' \) -exec shellcheck {} +
 
       - name: Final status gate
-        if: always()
+        if: ${{ !cancelled() }}
         shell: bash
         run: |
           set -euo pipefail
