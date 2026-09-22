@@ -9,7 +9,17 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # At the time of writing, ubuntu-latest points to ubuntu-24.04.
+    # In ubuntu-26.04, the version of libpoco-dev is 1.11.0. The front-end
+    # cmake config fails with error:
+    #   "Your Poco library contains a serious bug which will cause crashes. Your version is 1.11.0.
+    #   Affected versions are 1.10.0 to 1.11.1.  Please upgrade Poco to
+    #   at least 1.11.2 or downgrade to 1.9.x. This requires building the library from source."
+    # The simpler solution is to use ubuntu-26.04, which provides version 1.14.2-3.
+    # The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026.
+    # TODO: change runner to ubuntu-latest after October 19, 2026.
+
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Check out repository
