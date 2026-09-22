@@ -25,14 +25,14 @@ jobs:
           sudo apt-get install -y shellcheck shfmt
 
       - name: Spell check
-        id: spell
+        id: spelling
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
           codespell --skip='.git' .
 
-      - name: Shell syntax check
+      - name: Syntax
         id: syntax
         continue-on-error: true
         shell: bash
@@ -40,16 +40,16 @@ jobs:
           set -euo pipefail
           bash -n install.sh
 
-      - name: Formatting check with shfmt
-        id: fmt
+      - name: Formatting
+        id: formatting
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
           shfmt -ln bash -i 2 -d .
 
-      - name: Static analysis with shellcheck
-        id: shellcheck
+      - name: Static analysis
+        id: static-analysis
         continue-on-error: true
         shell: bash
         run: |
@@ -64,19 +64,19 @@ jobs:
 
           failed=0
 
-          for step in spell syntax fmt shellcheck; do
+          for step in spelling syntax formatting static-analysis; do
             case "$step" in
-              spell)
-                outcome="${{ steps.spell.outcome }}"
+              spelling)
+                outcome="${{ steps.spelling.outcome }}"
                 ;;
               syntax)
                 outcome="${{ steps.syntax.outcome }}"
                 ;;
-              fmt)
-                outcome="${{ steps.fmt.outcome }}"
+              formatting)
+                outcome="${{ steps.formatting.outcome }}"
                 ;;
-              shellcheck)
-                outcome="${{ steps.shellcheck.outcome }}"
+              static-analysis)
+                outcome="${{ steps.static-analysis.outcome }}"
                 ;;
             esac
 
