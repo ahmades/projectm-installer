@@ -1,0 +1,94 @@
+name: Shell Quality
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
+
+jobs:
+  shell-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install codespell
+          sudo apt-get update
+          sudo apt-get install -y shellcheck shfmt
+
+      - name: Spell check
+        id: spelling
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          codespell --skip='.git' .
+
+      - name: Syntax
+        id: syntax
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n install.sh
+
+      - name: Formatting
+        id: formatting
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          shfmt -ln bash -i 2 -d .
+
+      - name: Static analysis
+        id: static-analysis
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -type f \( -name '*.sh' -o -name '*.bash' \) -exec shellcheck {} +
+
+      - name: Aggregate status
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          failed=0
+
+          for step in spelling syntax formatting static-analysis; do
+            case "$step" in
+              spelling)
+                outcome="${{ steps.spelling.outcome }}"
+                ;;
+              syntax)
+                outcome="${{ steps.syntax.outcome }}"
+                ;;
+              formatting)
+                outcome="${{ steps.formatting.outcome }}"
+                ;;
+              static-analysis)
+                outcome="${{ steps.static-analysis.outcome }}"
+                ;;
+            esac
+
+            if [[ "$outcome" != "success" ]]; then
+              echo "Step '$step' failed with outcome: $outcome"
+              failed=1
+            fi
+          done
+
+          if [[ "$failed" -eq 1 ]]; then
+            echo "One or more shell quality checks failed."
+            exit 1
+          fi
+
+          echo "All shell quality checks passed."
