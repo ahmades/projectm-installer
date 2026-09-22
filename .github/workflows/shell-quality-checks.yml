@@ -1,8 +1,11 @@
 name: Shell Quality
 
 on:
-  push:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
 
 jobs:
   shell-quality:
@@ -53,7 +56,7 @@ jobs:
           set -euo pipefail
           find . -type f \( -name '*.sh' -o -name '*.bash' \) -exec shellcheck {} +
 
-      - name: Final status gate
+      - name: Aggregate status
         if: ${{ !cancelled() }}
         shell: bash
         run: |
