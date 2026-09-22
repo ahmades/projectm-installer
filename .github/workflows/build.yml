@@ -8,7 +8,7 @@ on:
       - master
 
 jobs:
-  install-default-with-presets:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,7 +34,7 @@ jobs:
             "${backend_dependencies[@]}" \
             "${frontend_dependencies[@]}"
 
-      - name: Run installer
+      - name: Build and install
         shell: bash
         run: |
           set -euo pipefail

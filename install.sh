@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
+shopt -s inherit_errexit
 
 BACK_END_GIT_URL="https://github.com/projectM-visualizer/projectm.git"
 FRONT_END_GIT_URL="https://github.com/projectM-visualizer/frontend-sdl-cpp.git"
