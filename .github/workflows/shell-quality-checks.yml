@@ -1,0 +1,91 @@
+name: Shell Quality
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  shell-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install codespell
+          sudo apt-get update
+          sudo apt-get install -y shellcheck shfmt
+
+      - name: Spell check
+        id: spell
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          codespell --skip='.git' .
+
+      - name: Shell syntax check
+        id: syntax
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n install.sh
+
+      - name: Formatting check with shfmt
+        id: fmt
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          shfmt -ln bash -i 2 -d .
+
+      - name: Static analysis with shellcheck
+        id: shellcheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -type f \( -name '*.sh' -o -name '*.bash' \) -exec shellcheck {} +
+
+      - name: Final status gate
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          failed=0
+
+          for step in spell syntax fmt shellcheck; do
+            case "$step" in
+              spell)
+                outcome="${{ steps.spell.outcome }}"
+                ;;
+              syntax)
+                outcome="${{ steps.syntax.outcome }}"
+                ;;
+              fmt)
+                outcome="${{ steps.fmt.outcome }}"
+                ;;
+              shellcheck)
+                outcome="${{ steps.shellcheck.outcome }}"
+                ;;
+            esac
+
+            if [[ "$outcome" != "success" ]]; then
+              echo "Step '$step' failed with outcome: $outcome"
+              failed=1
+            fi
+          done
+
+          if [[ "$failed" -eq 1 ]]; then
+            echo "One or more shell quality checks failed."
+            exit 1
+          fi
+
+          echo "All shell quality checks passed."
