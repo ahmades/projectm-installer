@@ -1,0 +1,59 @@
+name: Build
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    # At the time of writing, ubuntu-latest points to ubuntu-24.04.
+    # In ubuntu-26.04, the version of libpoco-dev is 1.11.0. The front-end
+    # cmake config fails with error:
+    #   "Your Poco library contains a serious bug which will cause crashes. Your version is 1.11.0.
+    #   Affected versions are 1.10.0 to 1.11.1.  Please upgrade Poco to
+    #   at least 1.11.2 or downgrade to 1.9.x. This requires building the library from source."
+    # The simpler solution is to use ubuntu-26.04, which provides version 1.14.2-3.
+    # The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026.
+    # TODO: change runner to ubuntu-latest after October 19, 2026.
+
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          # see https://github.com/projectM-visualizer/projectm/blob/master/docs/building.rst#quick-start-debian--ubuntu
+          backend_dependencies=(
+            libgl1-mesa-dev
+          )
+          # see https://github.com/projectM-visualizer/frontend-sdl-cpp#building-from-source
+          frontend_dependencies=(
+            libsdl2-dev \
+            libpoco-dev \
+            libfreetype-dev
+          )
+          sudo apt-get install -y \
+            "${backend_dependencies[@]}" \
+            "${frontend_dependencies[@]}"
+
+      - name: Build and install
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x ./install.sh
+          ./install.sh --prefix "$PWD/install-test" --with-presets
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: projectm-install
+          path: ${{ github.workspace }}/install-test
+          if-no-files-found: error
